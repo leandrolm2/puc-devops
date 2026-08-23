@@ -15,12 +15,12 @@ jobs:
 
     steps:
       - name: Checkout do Codigo
-        uses: actions/checkout@v2  # Baixa o codigo do seu repositorio no ambiente virtual
+        uses: actions/checkout@v4  # Baixa o codigo do seu repositorio no ambiente virtual
 
       - name: Setup do Node.js
-        uses: actions/setup-node@v2  # Configura a runtime do Node.js no ambiente
+        uses: actions/setup-node@v4  # Configura a runtime do Node.js no ambiente
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'  # Habilita cache de dependencias para builds rapidos
 
       - name: Instalar Dependencias
