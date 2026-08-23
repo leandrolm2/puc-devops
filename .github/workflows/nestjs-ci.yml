@@ -1,0 +1,36 @@
+name: NestJS CI Pipeline
+
+# Dispara o pipeline automaticamente a cada push ou PR para a branch main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Fase de Integração Contínua (CI)
+  continuous-integration:
+    name: CI - Validacao e Testes do NestJS
+    runs-on: ubuntu-latest  # Executa em uma máquina virtual Ubuntu limpa fornecida pelo GitHub
+
+    steps:
+      - name: Checkout do Codigo
+        uses: actions/checkout@v4  # Baixa o codigo do seu repositorio no ambiente virtual
+
+      - name: Setup do Node.js
+        uses: actions/setup-node@v4  # Configura a runtime do Node.js no ambiente
+        with:
+          node-version: '18'
+          cache: 'npm'  # Habilita cache de dependencias para builds rapidos
+
+      - name: Instalar Dependencias
+        run: npm ci  # Faz instalacao limpa e reproduzivel baseada no package-lock.json
+
+      - name: Analise de Codigo (Linter)
+        run: npm run lint --if-present  # Executa o ESLint para garantir a qualidade estrutural
+
+      - name: Executar Testes Unitarios (Jest)
+        run: npm test  # Roda a suite de testes integrada padrão do NestJS
+
+      - name: Validar Build da Aplicacao
+        run: npm run build  # Garante que o NestJS compila TypeScript para JS com sucesso
