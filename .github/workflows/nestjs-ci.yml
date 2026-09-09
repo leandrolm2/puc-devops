@@ -1,36 +1,55 @@
-name: NestJS CI Pipeline
+name: CI/CD Pipeline
 
-# Dispara o pipeline automaticamente a cada push ou PR para a branch main
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: seu-repositorio
 
 jobs:
-  # Fase de Integração Contínua (CI)
   continuous-integration:
-    name: CI - Validacao e Testes do NestJS
-    runs-on: ubuntu-latest  # Executa em uma máquina virtual Ubuntu limpa fornecida pelo GitHub
+    name: CI - Build e Testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Codigo
+        uses: actions/checkout@v4
+      # ... resto dos seus steps de CI
+
+  continuous-delivery:
+    name: CD - Build Docker e Push para ECR
+    needs: continuous-integration
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout do Codigo
-        uses: actions/checkout@v4  # Baixa o codigo do seu repositorio no ambiente virtual
+        uses: actions/checkout@v4
 
-      - name: Setup do Node.js
-        uses: actions/setup-node@v4  # Configura a runtime do Node.js no ambiente
+      - name: Configurar Credenciais da AWS (AWS Academy)
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          node-version: '22'
-          cache: 'npm'  # Habilita cache de dependencias para builds rapidos
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Instalar Dependencias
-        run: npm ci  # Faz instalacao limpa e reproduzivel baseada no package-lock.json
+      - name: Login no Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Analise de Codigo (Linter)
-        run: npm run lint --if-present  # Executa o ESLint para garantir a qualidade estrutural
-
-      - name: Executar Testes Unitarios (Jest)
-        run: npm test  # Roda a suite de testes integrada padrão do NestJS
-
-      - name: Validar Build da Aplicacao
-        run: npm run build  # Garante que o NestJS compila TypeScript para JS com sucesso
+      - name: Build, Tag e Push da Imagem Docker para o ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
